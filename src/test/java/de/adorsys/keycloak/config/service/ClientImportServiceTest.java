@@ -31,16 +31,20 @@ import de.adorsys.keycloak.config.service.state.StateService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.keycloak.representations.idm.ClientRepresentation;
+import org.keycloak.representations.idm.ClientScopeRepresentation;
 import org.keycloak.representations.idm.authorization.ResourceServerRepresentation;
 
 import java.util.List;
 import java.util.Optional;
+
+import jakarta.ws.rs.ForbiddenException;
 
 import static de.adorsys.keycloak.config.properties.ImportConfigProperties.ImportManagedProperties.ImportManagedPropertiesValues.FULL;
 import static de.adorsys.keycloak.config.properties.ImportConfigProperties.ImportManagedProperties.ImportManagedPropertiesValues.NO_DELETE;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class ClientImportServiceTest {
@@ -170,5 +174,102 @@ class ClientImportServiceTest {
 
         verify(clientRepository, times(1)).remove("test-realm", existingOther);
         verify(clientRepository, never()).remove("test-realm", existingAdminPermissions);
+    }
+
+    @Test
+    void shouldNotReadSecretOfRealmManagementClient() {
+        ClientRepresentation existing = new ClientRepresentation();
+        existing.setClientId(ClientImportService.REALM_MANAGEMENT_CLIENT_ID);
+        existing.setSecret("**********");
+        existing.setDefaultClientScopes(List.of());
+        existing.setOptionalClientScopes(List.of());
+        when(clientRepository.searchByClientId("test-realm", "realm-management")).thenReturn(Optional.of(existing));
+        when(clientRepository.getClientSecret(anyString(), anyString())).thenThrow(new ForbiddenException());
+
+        ClientRepresentation realmManagement = new ClientRepresentation();
+        realmManagement.setClientId(ClientImportService.REALM_MANAGEMENT_CLIENT_ID);
+
+        RealmImport realmImport = new RealmImport();
+        realmImport.setRealm("test-realm");
+        realmImport.setClients(List.of(realmManagement));
+
+        service.doImport(realmImport);
+
+        verify(clientRepository, never()).getClientSecret(anyString(), anyString());
+        verify(clientRepository, never()).update(anyString(), any());
+    }
+
+    @Test
+    void shouldNotReadSecretOfMasterRealmClient() {
+        ClientRepresentation existing = new ClientRepresentation();
+        existing.setClientId("my-realm");
+        existing.setSecret("**********");
+        existing.setDefaultClientScopes(List.of());
+        existing.setOptionalClientScopes(List.of());
+        when(clientRepository.searchByClientId("master", "my-realm")).thenReturn(Optional.of(existing));
+        when(clientRepository.getClientSecret(anyString(), anyString())).thenThrow(new ForbiddenException());
+
+        ClientRepresentation masterRealmClient = new ClientRepresentation();
+        masterRealmClient.setClientId("my-realm");
+
+        RealmImport realmImport = new RealmImport();
+        realmImport.setRealm("master");
+        realmImport.setClients(List.of(masterRealmClient));
+
+        service.doImport(realmImport);
+
+        verify(clientRepository, never()).getClientSecret(anyString(), anyString());
+        verify(clientRepository, never()).update(anyString(), any());
+    }
+
+    @Test
+    void shouldStillReadSecretOfRegularClient() {
+        ClientRepresentation existing = new ClientRepresentation();
+        existing.setClientId("my-client");
+        existing.setSecret("**********");
+        existing.setDefaultClientScopes(List.of());
+        existing.setOptionalClientScopes(List.of());
+        when(clientRepository.searchByClientId("test-realm", "my-client")).thenReturn(Optional.of(existing));
+        when(clientRepository.getClientSecret("test-realm", "my-client")).thenThrow(new ForbiddenException());
+
+        ClientRepresentation client = new ClientRepresentation();
+        client.setClientId("my-client");
+
+        RealmImport realmImport = new RealmImport();
+        realmImport.setRealm("test-realm");
+        realmImport.setClients(List.of(client));
+
+        assertThrows(ForbiddenException.class, () -> service.doImport(realmImport));
+    }
+
+    @Test
+    void shouldAddServiceAccountAndAdminApiScopesOnRegularClient() {
+        ClientRepresentation existing = new ClientRepresentation();
+        existing.setClientId("my-client");
+        existing.setDefaultClientScopes(List.of());
+        existing.setOptionalClientScopes(List.of());
+        when(clientRepository.searchByClientId("test-realm", "my-client")).thenReturn(Optional.of(existing));
+        when(clientScopeRepository.getListByNames(anyString(), any())).thenAnswer(invocation -> {
+            List<String> names = invocation.getArgument(1);
+            return names.stream().map(name -> {
+                ClientScopeRepresentation scope = new ClientScopeRepresentation();
+                scope.setId(name);
+                scope.setName(name);
+                return scope;
+            }).toList();
+        });
+
+        ClientRepresentation client = new ClientRepresentation();
+        client.setClientId("my-client");
+        client.setDefaultClientScopes(List.of("service_account", "kc-admin-api"));
+        client.setOptionalClientScopes(List.of());
+
+        RealmImport realmImport = new RealmImport();
+        realmImport.setRealm("test-realm");
+        realmImport.setClients(List.of(client));
+
+        service.doImport(realmImport);
+
+        verify(clientRepository).addDefaultClientScopes(eq("test-realm"), eq("my-client"), any());
     }
 }

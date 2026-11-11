@@ -144,8 +144,7 @@ public class ClientImportService {
                 .filter(client -> !KeycloakUtil.isDefaultClient(client)
                         && !importedClients.contains(client.getClientId())
                         && (!isState || stateClients.contains(client.getClientId()))
-                        && !(Objects.equals(realmImport.getRealm(), "master")
-                                && client.getClientId().endsWith("-realm"))
+                        && !KeycloakUtil.isKeycloakInternalClient(realmImport.getRealm(), client.getClientId())
                         && !(ADMIN_PERMISSIONS_CLIENT_ID.equals(client.getClientId())
                                 && keycloakProvider.isFgapV2Active())
                 )
@@ -343,6 +342,14 @@ public class ClientImportService {
 
         String patchedClientSecret = patchedClient.getSecret();
         if (patchedClientSecret == null) {
+            return true;
+        }
+
+        // Keycloak manages the secret of its internal clients itself and, since 26.8, denies reading it
+        // to every admin (ClientPermissions.isInternal), so a comparison is neither possible nor meaningful.
+        if (KeycloakUtil.isKeycloakInternalClient(realmName, patchedClient.getClientId())) {
+            logger.debug("Skip secret comparison for Keycloak internal client '{}' in realm '{}'",
+                    patchedClient.getClientId(), realmName);
             return true;
         }
 

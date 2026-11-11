@@ -34,6 +34,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotFoundException;
 
 @Service
@@ -168,7 +169,17 @@ public class RoleRepository {
 
     public void updateClientRole(String realmName, String clientId, RoleRepresentation role) {
         RoleResource roleResource = loadClientRole(realmName, clientId, role.getName());
-        roleResource.update(role);
+        try {
+            roleResource.update(role);
+        } catch (ForbiddenException e) {
+            throw new KeycloakRepositoryException(
+                    String.format(
+                            "Cannot update client role '%s' for client '%s' in realm '%s': HTTP 403 Forbidden",
+                            role.getName(), clientId, realmName
+                    ),
+                    e
+            );
+        }
     }
 
     public void deleteClientRole(String realmName, String clientId, RoleRepresentation role) {

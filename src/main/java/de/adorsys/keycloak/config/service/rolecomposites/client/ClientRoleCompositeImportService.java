@@ -20,7 +20,10 @@
 
 package de.adorsys.keycloak.config.service.rolecomposites.client;
 
+import de.adorsys.keycloak.config.util.KeycloakUtil;
 import org.keycloak.representations.idm.RoleRepresentation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -35,6 +38,7 @@ import java.util.Optional;
 @Service
 @ConditionalOnProperty(prefix = "run", name = "operation", havingValue = "IMPORT", matchIfMissing = true)
 public class ClientRoleCompositeImportService {
+    private static final Logger logger = LoggerFactory.getLogger(ClientRoleCompositeImportService.class);
 
     private final RealmCompositeImport realmCompositeImport;
     private final ClientCompositeImport clientCompositeImport;
@@ -57,6 +61,12 @@ public class ClientRoleCompositeImportService {
     public void update(String realmName, Map<String, List<RoleRepresentation>> roles) {
         for (Map.Entry<String, List<RoleRepresentation>> clientRoles : roles.entrySet()) {
             String clientId = clientRoles.getKey();
+            if (KeycloakUtil.isKeycloakInternalClient(realmName, clientId)) {
+                logger.warn("Skip composite update for roles of Keycloak internal client '{}' in realm '{}': "
+                                + "Keycloak 26.8+ manages roles of internal client '{}' and they should be removed from the import",
+                        clientId, realmName, clientId);
+                continue;
+            }
 
             for (RoleRepresentation clientRole : clientRoles.getValue()) {
                 updateClientRoleRealmCompositesIfNecessary(realmName, clientId, clientRole);

@@ -200,6 +200,14 @@ public class RoleImportService {
     }
 
     private void createClientRole(String realmName, String clientId, RoleRepresentation roleToImport, String roleName) {
+        if (KeycloakUtil.isKeycloakInternalClient(realmName, clientId)) {
+            throw new ImportProcessingException(
+                    "Cannot create role '%s' for Keycloak internal client '%s' in realm '%s'. "
+                            + "Keycloak 26.8+ manages roles of internal client '%s' and they should be removed from the import.",
+                    roleName, clientId, realmName, clientId
+            );
+        }
+
         logger.debug("Create client-level role '{}' for client '{}' in realm '{}'", roleName, clientId, realmName);
         RoleRepresentation roleToImportWithoutDependencies = CloneUtil.deepClone(
                 roleToImport, RoleRepresentation.class, propertiesWithDependencies
@@ -237,6 +245,10 @@ public class RoleImportService {
 
         if (CloneUtil.deepEquals(existingRole, patchedRole)) {
             logger.debug("No need to update client-level role '{}' for client '{}' in realm '{}'", roleName, clientId, realmName);
+        } else if (KeycloakUtil.isKeycloakInternalClient(realmName, clientId)) {
+            logger.warn("Skip update of client-level role '{}' for client '{}' in realm '{}': "
+                            + "Keycloak 26.8+ manages roles of internal client '{}' and they should be removed from the import",
+                    roleName, clientId, realmName, clientId);
         } else {
             logger.debug("Update client-level role '{}' for client '{}' in realm '{}'", roleName, clientId, realmName);
             roleRepository.updateClientRole(realmName, clientId, patchedRole);
@@ -277,6 +289,12 @@ public class RoleImportService {
             Map<String, List<RoleRepresentation>> existingRoles
     ) {
         for (Map.Entry<String, List<RoleRepresentation>> client : existingRoles.entrySet()) {
+            if (KeycloakUtil.isKeycloakInternalClient(realmName, client.getKey())) {
+                logger.debug("Skip deletion of roles for Keycloak internal client '{}' in realm '{}'",
+                        client.getKey(), realmName);
+                continue;
+            }
+
             List<RoleRepresentation> managedRoles = getManagedClientRoles(client.getKey(), client.getValue());
 
             Set<String> importedClientRoles = importedClientsRoles.containsKey(client.getKey())

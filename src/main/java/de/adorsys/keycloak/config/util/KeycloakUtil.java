@@ -56,4 +56,15 @@ public class KeycloakUtil {
     public static boolean isDefaultClient(ClientRepresentation client) {
         return isDefaultResource("client", client.getClientId(), client.getName());
     }
+
+    /**
+     * Mirrors {@code org.keycloak.services.resources.admin.fgap.ClientPermissions#isInternal}.
+     * Keycloak 26.8 denies every admin, including a master realm admin, manage access to these clients.
+     */
+    public static boolean isKeycloakInternalClient(String realmName, String clientId) {
+        if ("master".equals(realmName)) {
+            return clientId != null && clientId.endsWith("-realm");
+        }
+        return "realm-management".equals(clientId);
+    }
 }

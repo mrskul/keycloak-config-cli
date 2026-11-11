@@ -56,4 +56,17 @@ class KeycloakUtilTest {
         client.setName("${client_account}");
         assertTrue(KeycloakUtil.isDefaultClient(client));
     }
+
+    @Test
+    void isKeycloakInternalClient() {
+        assertTrue(KeycloakUtil.isKeycloakInternalClient("test-realm", "realm-management"));
+        assertFalse(KeycloakUtil.isKeycloakInternalClient("test-realm", "my-client"));
+        assertFalse(KeycloakUtil.isKeycloakInternalClient("test-realm", null));
+
+        assertTrue(KeycloakUtil.isKeycloakInternalClient("master", "my-realm"));
+        assertTrue(KeycloakUtil.isKeycloakInternalClient("master", "master-realm"));
+        assertFalse(KeycloakUtil.isKeycloakInternalClient("master", "realm-management"));
+        assertFalse(KeycloakUtil.isKeycloakInternalClient("master", "admin-cli"));
+        assertFalse(KeycloakUtil.isKeycloakInternalClient("master", null));
+    }
 }
