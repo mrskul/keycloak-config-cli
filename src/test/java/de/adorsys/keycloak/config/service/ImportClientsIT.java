@@ -78,7 +78,9 @@ import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @SuppressWarnings({"java:S5961", "java:S5976"})
 class ImportClientsIT extends AbstractImportIT {
@@ -240,6 +242,26 @@ class ImportClientsIT extends AbstractImportIT {
         assertThat(client.getAttributes(), notNullValue());
         assertThat(client.getAttributes(), hasEntry("standard.token.exchange.enabled", "true"));
         assertThat(client.getAttributes(), hasEntry("standard.token.exchange.enableRefreshRequestedTokenType", "SAME_SESSION"));
+    }
+
+    @Test
+    @Order(28)
+    void shouldAddClientWithKcAdminApiScopeAndInternalRoles() throws IOException {
+        assumeTrue(VersionUtil.ge(KEYCLOAK_VERSION, "26.8"), "kc-admin-api scope requires Keycloak 26.8+");
+
+        doImport("28_update_realm__add_client_with_internal_roles_and_kc_admin_api.json");
+
+        RealmRepresentation realm = keycloakProvider.getInstance().realm(REALM_NAME).partialExport(false, true);
+        assertThat(realm.getRealm(), is(REALM_NAME));
+
+        ClientRepresentation client = getClientByClientId(realm, "admin-api-client");
+        assertThat(client, notNullValue());
+        assertThat(client.isServiceAccountsEnabled(), is(true));
+        assertThat(client.getDefaultClientScopes(), hasItem("kc-admin-api"));
+
+        List<String> realmManagementRoles = keycloakRepository.getServiceAccountUserClientLevelRoles(
+                REALM_NAME, "admin-api-client", "realm-management");
+        assertThat(realmManagementRoles, containsInAnyOrder("view-realm", "manage-users", "query-users"));
     }
 
     @Test

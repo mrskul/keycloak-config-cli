@@ -272,4 +272,37 @@ class ClientImportServiceTest {
 
         verify(clientRepository).addDefaultClientScopes(eq("test-realm"), eq("my-client"), any());
     }
+
+    @Test
+    void shouldNotDeleteRealmManagementClientWhenManagedFull() {
+        when(managedProperties.getClient()).thenReturn(FULL);
+
+        ClientRepresentation imported = new ClientRepresentation();
+        imported.setClientId("keep");
+        imported.setDefaultClientScopes(List.of());
+        imported.setOptionalClientScopes(List.of());
+
+        ClientRepresentation existingRealmManagement = new ClientRepresentation();
+        existingRealmManagement.setClientId("realm-management");
+
+        ClientRepresentation existingOther = new ClientRepresentation();
+        existingOther.setClientId("remove-me");
+
+        ClientRepresentation existingKeep = new ClientRepresentation();
+        existingKeep.setClientId("keep");
+        existingKeep.setDefaultClientScopes(List.of());
+        existingKeep.setOptionalClientScopes(List.of());
+
+        when(clientRepository.getAll("test-realm")).thenReturn(List.of(existingRealmManagement, existingOther));
+        when(clientRepository.searchByClientId("test-realm", "keep")).thenReturn(Optional.of(existingKeep));
+
+        RealmImport realmImport = new RealmImport();
+        realmImport.setRealm("test-realm");
+        realmImport.setClients(List.of(imported));
+
+        service.doImport(realmImport);
+
+        verify(clientRepository, times(1)).remove("test-realm", existingOther);
+        verify(clientRepository, never()).remove("test-realm", existingRealmManagement);
+    }
 }

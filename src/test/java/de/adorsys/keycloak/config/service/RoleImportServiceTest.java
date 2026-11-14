@@ -20,7 +20,6 @@
 
 package de.adorsys.keycloak.config.service;
 
-import de.adorsys.keycloak.config.exception.ImportProcessingException;
 import de.adorsys.keycloak.config.model.RealmImport;
 import de.adorsys.keycloak.config.properties.ImportConfigProperties;
 import de.adorsys.keycloak.config.repository.RoleRepository;
@@ -37,7 +36,6 @@ import java.util.Map;
 
 import static de.adorsys.keycloak.config.properties.ImportConfigProperties.ImportManagedProperties.ImportManagedPropertiesValues.FULL;
 import static de.adorsys.keycloak.config.properties.ImportConfigProperties.ImportManagedProperties.ImportManagedPropertiesValues.NO_DELETE;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -132,7 +130,7 @@ class RoleImportServiceTest {
     }
 
     @Test
-    void shouldNotCreateRoleOnRealmManagementClient() {
+    void shouldSkipCreateOfRoleOnRealmManagementClient() {
         when(roleRepository.getClientRoles("test-realm"))
                 .thenReturn(Map.of("realm-management", List.of()));
 
@@ -140,7 +138,22 @@ class RoleImportServiceTest {
                 "realm-management", List.of(role("custom-admin", "not a built-in role"))
         ));
 
-        assertThrows(ImportProcessingException.class, () -> service.doImport(realmImport));
+        service.doImport(realmImport);
+
+        verify(roleRepository, never()).createClientRole(any(), any(), any());
+        verify(roleRepository, never()).updateClientRole(any(), any(), any());
+    }
+
+    @Test
+    void shouldSkipCreateOfRoleOnMasterRealmInternalClient() {
+        when(roleRepository.getClientRoles("master"))
+                .thenReturn(Map.of("my-realm-realm", List.of()));
+
+        RealmImport realmImport = realmWithClientRoles("master", Map.of(
+                "my-realm-realm", List.of(role("custom-admin", "not a built-in role"))
+        ));
+
+        service.doImport(realmImport);
 
         verify(roleRepository, never()).createClientRole(any(), any(), any());
         verify(roleRepository, never()).updateClientRole(any(), any(), any());

@@ -1,0 +1,48 @@
+{
+  "enabled": true,
+  "realm": "realmWithClients",
+  "clients": [
+    {
+      "clientId": "admin-api-client",
+      "name": "admin-api-client",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "admin-api-client-secret",
+      "bearerOnly": false,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect",
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "roles",
+        "profile",
+        "basic",
+        "email",
+        "kc-admin-api"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-admin-api-client",
+      "enabled": true,
+      "serviceAccountClientId": "admin-api-client",
+      "clientRoles": {
+        "realm-management": [
+          "view-realm",
+          "manage-users",
+          "query-users"
+        ]
+      }
+    }
+  ]
+}

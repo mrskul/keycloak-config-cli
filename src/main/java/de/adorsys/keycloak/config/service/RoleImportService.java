@@ -201,11 +201,10 @@ public class RoleImportService {
 
     private void createClientRole(String realmName, String clientId, RoleRepresentation roleToImport, String roleName) {
         if (KeycloakUtil.isKeycloakInternalClient(realmName, clientId)) {
-            throw new ImportProcessingException(
-                    "Cannot create role '%s' for Keycloak internal client '%s' in realm '%s'. "
-                            + "Keycloak 26.8+ manages roles of internal client '%s' and they should be removed from the import.",
-                    roleName, clientId, realmName, clientId
-            );
+            // Keycloak 26.8+ rejects role writes on internal clients; keep them in the import and skip.
+            logger.debug("Skip create of client-level role '{}' for Keycloak internal client '{}' in realm '{}'",
+                    roleName, clientId, realmName);
+            return;
         }
 
         logger.debug("Create client-level role '{}' for client '{}' in realm '{}'", roleName, clientId, realmName);
@@ -246,9 +245,9 @@ public class RoleImportService {
         if (CloneUtil.deepEquals(existingRole, patchedRole)) {
             logger.debug("No need to update client-level role '{}' for client '{}' in realm '{}'", roleName, clientId, realmName);
         } else if (KeycloakUtil.isKeycloakInternalClient(realmName, clientId)) {
-            logger.warn("Skip update of client-level role '{}' for client '{}' in realm '{}': "
-                            + "Keycloak 26.8+ manages roles of internal client '{}' and they should be removed from the import",
-                    roleName, clientId, realmName, clientId);
+            // Keycloak 26.8+ rejects role writes on internal clients; keep them in the import and skip.
+            logger.debug("Skip update of client-level role '{}' for Keycloak internal client '{}' in realm '{}'",
+                    roleName, clientId, realmName);
         } else {
             logger.debug("Update client-level role '{}' for client '{}' in realm '{}'", roleName, clientId, realmName);
             roleRepository.updateClientRole(realmName, clientId, patchedRole);

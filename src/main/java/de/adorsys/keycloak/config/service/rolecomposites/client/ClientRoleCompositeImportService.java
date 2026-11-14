@@ -62,9 +62,9 @@ public class ClientRoleCompositeImportService {
         for (Map.Entry<String, List<RoleRepresentation>> clientRoles : roles.entrySet()) {
             String clientId = clientRoles.getKey();
             if (KeycloakUtil.isKeycloakInternalClient(realmName, clientId)) {
-                logger.warn("Skip composite update for roles of Keycloak internal client '{}' in realm '{}': "
-                                + "Keycloak 26.8+ manages roles of internal client '{}' and they should be removed from the import",
-                        clientId, realmName, clientId);
+                // Keycloak 26.8+ rejects role writes on internal clients; keep them in the import and skip.
+                logger.debug("Skip composite update for roles of Keycloak internal client '{}' in realm '{}'",
+                        clientId, realmName);
                 continue;
             }
 
