@@ -74,7 +74,7 @@ class ClientRoleCompositeImportServiceTest {
     }
 
     @Test
-    void shouldSkipCompositeUpdateForMasterRealmInternalClient() {
+    void shouldSkipCompositeUpdateForMasterRealmManagementClient() {
         RoleRepresentation role = compositeRole("manage-users", Set.of("view-users"), null);
 
         service.update("master", Map.of("my-realm-realm", List.of(role)));

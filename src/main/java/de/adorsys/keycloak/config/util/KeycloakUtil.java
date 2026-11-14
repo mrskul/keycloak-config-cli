@@ -58,10 +58,11 @@ public class KeycloakUtil {
     }
 
     /**
+     * Whether this client holds the realm-management roles Keycloak protects from admin writes.
+     * In normal realms that is {@code realm-management}; in {@code master} it is the {@code *-realm} clients.
      * Mirrors {@code org.keycloak.services.resources.admin.fgap.ClientPermissions#isInternal}.
-     * Keycloak 26.8 denies every admin, including a master realm admin, manage access to these clients.
      */
-    public static boolean isKeycloakInternalClient(String realmName, String clientId) {
+    public static boolean isRealmManagementClient(String realmName, String clientId) {
         if ("master".equals(realmName)) {
             return clientId != null && clientId.endsWith("-realm");
         }

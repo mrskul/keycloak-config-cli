@@ -200,10 +200,8 @@ public class RoleImportService {
     }
 
     private void createClientRole(String realmName, String clientId, RoleRepresentation roleToImport, String roleName) {
-        if (KeycloakUtil.isKeycloakInternalClient(realmName, clientId)) {
-            // Keycloak 26.8+ rejects role writes on internal clients; keep them in the import and skip.
-            logger.debug("Skip create of client-level role '{}' for Keycloak internal client '{}' in realm '{}'",
-                    roleName, clientId, realmName);
+        // Keycloak 26.8+ rejects writes to realm-management roles; keep them in the import and skip.
+        if (KeycloakUtil.isRealmManagementClient(realmName, clientId)) {
             return;
         }
 
@@ -242,13 +240,10 @@ public class RoleImportService {
         RoleRepresentation patchedRole = CloneUtil.patch(existingRole, roleToImport, propertiesWithDependencies);
         String roleName = existingRole.getName();
 
+        // Keycloak 26.8+ rejects writes to realm-management roles; keep them in the import and skip.
         if (CloneUtil.deepEquals(existingRole, patchedRole)) {
             logger.debug("No need to update client-level role '{}' for client '{}' in realm '{}'", roleName, clientId, realmName);
-        } else if (KeycloakUtil.isKeycloakInternalClient(realmName, clientId)) {
-            // Keycloak 26.8+ rejects role writes on internal clients; keep them in the import and skip.
-            logger.debug("Skip update of client-level role '{}' for Keycloak internal client '{}' in realm '{}'",
-                    roleName, clientId, realmName);
-        } else {
+        } else if (!KeycloakUtil.isRealmManagementClient(realmName, clientId)) {
             logger.debug("Update client-level role '{}' for client '{}' in realm '{}'", roleName, clientId, realmName);
             roleRepository.updateClientRole(realmName, clientId, patchedRole);
         }
@@ -288,9 +283,8 @@ public class RoleImportService {
             Map<String, List<RoleRepresentation>> existingRoles
     ) {
         for (Map.Entry<String, List<RoleRepresentation>> client : existingRoles.entrySet()) {
-            if (KeycloakUtil.isKeycloakInternalClient(realmName, client.getKey())) {
-                logger.debug("Skip deletion of roles for Keycloak internal client '{}' in realm '{}'",
-                        client.getKey(), realmName);
+            // Keycloak 26.8+ rejects writes to realm-management roles; keep them in the import and skip.
+            if (KeycloakUtil.isRealmManagementClient(realmName, client.getKey())) {
                 continue;
             }
 

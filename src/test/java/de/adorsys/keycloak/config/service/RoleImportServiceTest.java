@@ -145,7 +145,7 @@ class RoleImportServiceTest {
     }
 
     @Test
-    void shouldSkipCreateOfRoleOnMasterRealmInternalClient() {
+    void shouldSkipCreateOfRoleOnMasterRealmManagementClient() {
         when(roleRepository.getClientRoles("master"))
                 .thenReturn(Map.of("my-realm-realm", List.of()));
 

@@ -58,15 +58,15 @@ class KeycloakUtilTest {
     }
 
     @Test
-    void isKeycloakInternalClient() {
-        assertTrue(KeycloakUtil.isKeycloakInternalClient("test-realm", "realm-management"));
-        assertFalse(KeycloakUtil.isKeycloakInternalClient("test-realm", "my-client"));
-        assertFalse(KeycloakUtil.isKeycloakInternalClient("test-realm", null));
+    void isRealmManagementClient() {
+        assertTrue(KeycloakUtil.isRealmManagementClient("test-realm", "realm-management"));
+        assertFalse(KeycloakUtil.isRealmManagementClient("test-realm", "my-client"));
+        assertFalse(KeycloakUtil.isRealmManagementClient("test-realm", null));
 
-        assertTrue(KeycloakUtil.isKeycloakInternalClient("master", "my-realm"));
-        assertTrue(KeycloakUtil.isKeycloakInternalClient("master", "master-realm"));
-        assertFalse(KeycloakUtil.isKeycloakInternalClient("master", "realm-management"));
-        assertFalse(KeycloakUtil.isKeycloakInternalClient("master", "admin-cli"));
-        assertFalse(KeycloakUtil.isKeycloakInternalClient("master", null));
+        assertTrue(KeycloakUtil.isRealmManagementClient("master", "my-realm"));
+        assertTrue(KeycloakUtil.isRealmManagementClient("master", "master-realm"));
+        assertFalse(KeycloakUtil.isRealmManagementClient("master", "realm-management"));
+        assertFalse(KeycloakUtil.isRealmManagementClient("master", "admin-cli"));
+        assertFalse(KeycloakUtil.isRealmManagementClient("master", null));
     }
 }
